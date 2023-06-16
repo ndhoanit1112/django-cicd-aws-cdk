@@ -1,8 +1,8 @@
 {
-  "name": "django-deploy-cdk",
+  "name": "django-cicd-aws-cdk",
   "version": "0.1.0",
   "bin": {
-    "django-deploy-cdk": "bin/django-deploy-cdk.js"
+    "django-cicd-aws-cdk": "bin/django-cicd-aws-cdk.js"
   },
   "scripts": {
     "build": "tsc",

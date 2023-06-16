@@ -1,0 +1,19 @@
+region: us-east-2
+vpc:
+  stackId: DjangoDeployVpcStack
+  constructId: DjangoDeployVpc
+  name: django-deploy-vpc
+  cidr: 10.0.0.0/16
+  securityGroup:
+    public:
+      constructId: PublicSecurityGroup
+      name: django-deploy-public-sg
+    private:
+      constructId: PrivateSecurityGroup
+      name: django-deploy-private-sg
+    bastion:
+      constructId: BastionSecurityGroup
+      name: django-deploy-bastion-sg
+    isolated:
+      constructId: IsolatedSecurityGroup
+      name: django-deploy-isolated-sg

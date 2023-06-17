@@ -30,3 +30,14 @@ rds:
     constructId: DjangoDeployBastionHost
     hostName: django-deploy-bastion-ec2
     keyName: django-deploy-bastion-key
+ecr:
+  stackId: DjangoDeployEcr
+  webapp:
+    constructId: WebappEcrRepo
+    name: django-deploy-webapp-repo
+  nginx:
+    constructId: NginxEcrRepo
+    name: django-deploy-nginx-repo
+  celery:
+    constructId: CeleryEcrRepo
+    name: django-deploy-celery-repo

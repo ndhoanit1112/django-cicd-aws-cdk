@@ -4,6 +4,7 @@ import * as cdk from 'aws-cdk-lib';
 import { loadEnvironmentVariablesFile } from '../common/utils';
 import { VpcStack } from '../lib/vpc-stack';
 import { RdsStack } from '../lib/rds-stack';
+import { EcrStack } from '../lib/ecr-stack';
 
 const app = new cdk.App();
 const mode = process.env.MODE === "prod" ? "prod" : "dev";
@@ -45,6 +46,17 @@ const rdsStack = new RdsStack(app, env.rds.stackId + envSuffix, {
   vpc: vpcStack.vpc,
   dbSecurityGroup: vpcStack.isolatedSg,
   bastionSecurityGroup: vpcStack.bastionSg,
+});
+
+const ecrStack = new EcrStack(app, env.ecr.stackId + envSuffix, {
+  env: stackDeployEnv,
+  mode: mode,
+  webappRepoConstructId: env.ecr.webapp.constructId,
+  webappRepoName: env.ecr.webapp.name,
+  nginxRepoConstructId: env.ecr.nginx.constructId,
+  nginxRepoName: env.ecr.nginx.name,
+  celeryRepoConstructId: env.ecr.celery.constructId,
+  celeryRepoName: env.ecr.celery.name,
 });
 
 app.synth();

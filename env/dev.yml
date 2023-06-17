@@ -17,3 +17,16 @@ vpc:
     isolated:
       constructId: IsolatedSecurityGroup
       name: django-deploy-isolated-sg
+rds:
+  stackId: DjangoDeployRdsStack
+  db:
+    constructId: DjangoDeployRds
+    dbName: db_django_deploy
+    masterUsername: root
+    backupRetention: 7
+    backupPreferredWindow: "18:00-20:00"
+    parameterGroupConstructId: DjangoDeployRdsParameterGroup
+  bastion:
+    constructId: DjangoDeployBastionHost
+    hostName: django-deploy-bastion-ec2
+    keyName: django-deploy-bastion-key

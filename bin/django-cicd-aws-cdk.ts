@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { VpcStack } from '../lib/vpc-stack';
 import { loadEnvironmentVariablesFile } from '../common/utils';
+import { VpcStack } from '../lib/vpc-stack';
+import { RdsStack } from '../lib/rds-stack';
 
 const app = new cdk.App();
 const mode = process.env.MODE === "prod" ? "prod" : "dev";
@@ -15,10 +16,10 @@ const stackDeployEnv = {
 };
 
 const vpcStack = new VpcStack(app, env.vpc.stackId + envSuffix, {
+  env: stackDeployEnv,
   vpcConstructId: env.vpc.constructId + envSuffix,
   vpcName: env.vpc.name + envSuffix,
   vpcCidr: env.vpc.cidr,
-  env: stackDeployEnv,
   sgPublicConstructId: env.vpc.securityGroup.public.constructId,
   sgPublicName: env.vpc.securityGroup.public.name,
   sgPrivateConstructId: env.vpc.securityGroup.private.constructId,
@@ -27,6 +28,23 @@ const vpcStack = new VpcStack(app, env.vpc.stackId + envSuffix, {
   sgBastionName: env.vpc.securityGroup.bastion.name,
   sgIsolatedConstructId: env.vpc.securityGroup.isolated.constructId,
   sgIsolatedName: env.vpc.securityGroup.isolated.name,
+});
+
+const rdsStack = new RdsStack(app, env.rds.stackId + envSuffix, {
+  env: stackDeployEnv,
+  mode: mode,
+  dbConstructId: env.rds.db.constructId,
+  dbName: env.rds.db.dbName,
+  dbBackupRetention: env.rds.db.backupRetention,
+  dbBackupPreferredWindow: env.rds.db.backupPreferredWindow,
+  parameterGroupConstructId: env.rds.db.parameterGroupConstructId,
+  bastionHostName: env.rds.bastion.hostName,
+  bastionHostConstructId: env.rds.bastion.constructId,
+  bastionHostKeyName: env.rds.bastion.keyName,
+  masterUsername: env.rds.db.masterUsername,
+  vpc: vpcStack.vpc,
+  dbSecurityGroup: vpcStack.isolatedSg,
+  bastionSecurityGroup: vpcStack.bastionSg,
 });
 
 app.synth();

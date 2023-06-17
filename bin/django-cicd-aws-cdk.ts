@@ -5,6 +5,7 @@ import { loadEnvironmentVariablesFile } from '../common/utils';
 import { VpcStack } from '../lib/vpc-stack';
 import { RdsStack } from '../lib/rds-stack';
 import { EcrStack } from '../lib/ecr-stack';
+import { ElbStack } from '../lib/elb-stack';
 
 const app = new cdk.App();
 const mode = process.env.MODE === "prod" ? "prod" : "dev";
@@ -57,6 +58,18 @@ const ecrStack = new EcrStack(app, env.ecr.stackId + envSuffix, {
   nginxRepoName: env.ecr.nginx.name,
   celeryRepoConstructId: env.ecr.celery.constructId,
   celeryRepoName: env.ecr.celery.name,
+});
+
+const elbStack = new ElbStack(app, env.elb.stackId + envSuffix, {
+  env: stackDeployEnv,
+  lbConstructId: env.elb.lb.constructId,
+  lbName: env.elb.lb.name,
+  listenerConstructId: env.elb.listener.constructId,
+  targetGroupConstructId: env.elb.targetGroup.constructId,
+  targetGroupName: env.elb.targetGroup.name,
+  healthCheckPath: env.elb.targetGroup.healthCheckPath,
+  vpc: vpcStack.vpc,
+  securityGroup: vpcStack.publicSg,
 });
 
 app.synth();

@@ -41,3 +41,14 @@ ecr:
   celery:
     constructId: CeleryEcrRepo
     name: django-deploy-celery-repo
+elb:
+  stackId: DjangoDeployElbStack
+  lb:
+    constructId: DjangoDeployElb
+    name: django-deploy-elb
+  listener:
+    constructId: DjangoDeployElbListener
+  targetGroup:
+    constructId: DjangoDeployTg
+    name: django-deploy-tg
+    healthCheckPath: /polls/healthcheck/

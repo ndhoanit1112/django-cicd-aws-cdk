@@ -13,37 +13,40 @@ interface EcrStackProps extends cdk.StackProps {
 }
 
 export class EcrStack extends cdk.Stack {
+  readonly webappRepository;
+  readonly nginxRepository;
+  readonly celeryRepository;
   constructor(scope: Construct, id: string, props: EcrStackProps) {
     super(scope, id, props);
 
-    const webappRepository = new ecr.Repository(this, props.webappRepoConstructId, {
+    this.webappRepository = new ecr.Repository(this, props.webappRepoConstructId, {
         repositoryName: props.webappRepoName,
         imageScanOnPush: true,
         removalPolicy: props.mode == "dev" ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
         autoDeleteImages: props.mode == "dev",
     });
 
-    webappRepository.addLifecycleRule({
+    this.webappRepository.addLifecycleRule({
       maxImageAge: cdk.Duration.days(30),
     });
 
-    const nginxRepository = new ecr.Repository(this, props.nginxRepoConstructId, {
+    this.nginxRepository = new ecr.Repository(this, props.nginxRepoConstructId, {
         repositoryName: props.nginxRepoName,
         removalPolicy: props.mode == "dev" ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
         autoDeleteImages: props.mode == "dev",
     });
 
-    nginxRepository.addLifecycleRule({
+    this.nginxRepository.addLifecycleRule({
       maxImageAge: cdk.Duration.days(30),
     });
 
-    const celeryRepository = new ecr.Repository(this, props.celeryRepoConstructId, {
+    this.celeryRepository = new ecr.Repository(this, props.celeryRepoConstructId, {
         repositoryName: props.celeryRepoName,
         removalPolicy: props.mode == "dev" ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
         autoDeleteImages: props.mode == "dev",
     });
 
-    celeryRepository.addLifecycleRule({
+    this.celeryRepository.addLifecycleRule({
       maxImageAge: cdk.Duration.days(30),
     });
   }

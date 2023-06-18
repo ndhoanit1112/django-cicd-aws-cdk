@@ -52,3 +52,41 @@ elb:
     constructId: DjangoDeployTg
     name: django-deploy-tg
     healthCheckPath: /polls/healthcheck/
+ecs:
+  stackId: DjangoDeployEcsStack
+  cluster:
+    constructId: DjangoDeployCluster
+    name: django-deploy-cluster
+  service:
+    web:
+      constructId: WebService
+      name: django-deploy-web-service
+    celery:
+      constructId: CeleryService
+      name: django-deploy-celery-service
+  taskDef:
+    web:
+      constructId: WebTaskDefinition
+      name: django-deploy-web-td
+      storage:
+        volumeName: gunicorn
+        mountPointPath:
+          web: /var/run/gunicorn
+          nginx: /var/run/gunicorn
+    celery:
+      constructId: CeleryTaskDefinition
+      name: django-deploy-celery-td
+  container:
+    web:
+      id: WebContainer
+      name: django-deploy-web-container
+    nginx:
+      id: NginxContainer
+      name: django-deploy-nginx-container
+      portMappingName: nginx-80-tcp
+    celery:
+      id: CeleryContainer
+      name: django-deploy-celery-container
+      entryPoint: /bin/sh,-c
+      command: celery -A app worker -l INFO -Q dfqueue
+      workingDir: /app

@@ -6,6 +6,7 @@ import { VpcStack } from '../lib/vpc-stack';
 import { RdsStack } from '../lib/rds-stack';
 import { EcrStack } from '../lib/ecr-stack';
 import { ElbStack } from '../lib/elb-stack';
+import { EcsStack } from '../lib/ecs-stack';
 
 const app = new cdk.App();
 const mode = process.env.MODE === "prod" ? "prod" : "dev";
@@ -70,6 +71,38 @@ const elbStack = new ElbStack(app, env.elb.stackId + envSuffix, {
   healthCheckPath: env.elb.targetGroup.healthCheckPath,
   vpc: vpcStack.vpc,
   securityGroup: vpcStack.publicSg,
+});
+
+const ecsStack = new EcsStack(app, env.ecs.stackId + envSuffix, {
+  env: stackDeployEnv,
+  mode: mode,
+  vpc: vpcStack.vpc,
+  clusterName: env.ecs.cluster.name,
+  clusterConstructId: env.ecs.cluster.constructId,
+  webServiceName: env.ecs.service.web.name,
+  webServiceConstructId: env.ecs.service.web.constructId,
+  webTaskDefConstructId: env.ecs.taskDef.web.constructId,
+  webTaskDefName: env.ecs.taskDef.web.name,
+  webContainerId: env.ecs.container.web.id,
+  webContainerName: env.ecs.container.web.name,
+  webImageRepository: ecrStack.webappRepository,
+  nginxContainerId: env.ecs.container.nginx.id,
+  nginxContainerName: env.ecs.container.nginx.name,
+  nginxContainerPortMappingName: env.ecs.container.nginx.portMappingName,
+  nginxImageRepository: ecrStack.nginxRepository,
+  celeryServiceName: env.ecs.service.celery.name,
+  celeryServiceConstructId: env.ecs.service.celery.constructId,
+  celeryTaskDefConstructId: env.ecs.taskDef.celery.constructId,
+  celeryTaskDefName: env.ecs.taskDef.celery.name,
+  celeryContainerId: env.ecs.container.celery.id,
+  celeryContainerName: env.ecs.container.celery.name,
+  celeryContainerEntryPoint: env.ecs.container.celery.entryPoint,
+  celeryContainerCommand: env.ecs.container.celery.command,
+  celeryContainerWorkingDir: env.ecs.container.celery.workingDir,
+  celeryImageRepository: ecrStack.celeryRepository,
+  volumeName: env.ecs.taskDef.web.storage.volumeName,
+  webContainerMountPointPath: env.ecs.taskDef.web.storage.mountPointPath.web,
+  nginxContainerMountPointPath: env.ecs.taskDef.web.storage.mountPointPath.nginx,
 });
 
 app.synth();

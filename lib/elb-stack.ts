@@ -43,5 +43,9 @@ export class ElbStack extends cdk.Stack {
       port: 80,
       defaultTargetGroups: [targetGroup],
     });
+
+    new cdk.CfnOutput(this, 'elbEndpoint', {
+      value: lb.loadBalancerDnsName,
+    });
   }
 }

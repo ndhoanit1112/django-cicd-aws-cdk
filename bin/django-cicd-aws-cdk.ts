@@ -7,6 +7,7 @@ import { RdsStack } from '../lib/rds-stack';
 import { EcrStack } from '../lib/ecr-stack';
 import { ElbStack } from '../lib/elb-stack';
 import { EcsStack } from '../lib/ecs-stack';
+import { SqsStack } from '../lib/sqs-stack';
 
 const app = new cdk.App();
 const mode = process.env.MODE === "prod" ? "prod" : "dev";
@@ -107,6 +108,23 @@ const ecsStack = new EcsStack(app, env.ecs.stackId + envSuffix, {
   nginxContainerMountPointPath: env.ecs.taskDef.web.storage.mountPointPath.nginx,
   privateSecurityGroup: vpcStack.privateSg,
   elbTargetGroup: elbStack.targetGroup,
+});
+
+const sqsStack = new SqsStack(app, env.sqs.stackId, {
+  env: stackDeployEnv,
+  mainQueueConstructId: env.sqs.mainQueue.constructId,
+  mainQueueName: env.sqs.mainQueue.name,
+  mainQueueRetentionPeriod: env.sqs.mainQueue.retentionPeriodInDays,
+  mainQueueVisibilityTimeout: env.sqs.mainQueue.visibilityTimeoutInHours,
+  dlQueueConstructId: env.sqs.dlQueue.constructId,
+  dlQueueName: env.sqs.dlQueue.name,
+  dlQueueRetentionPeriod: env.sqs.dlQueue.retentionPeriodInDays,
+  dlQueueVisibilityTimeout: env.sqs.dlQueue.visibilityTimeoutInHours,
+  dlQueueMaxReceiveCount: env.sqs.dlQueue.maxReceiveCount,
+  userConstructId: env.sqs.user.constructId,
+  userName: env.sqs.user.userName,
+  accessKeyConstructId: env.sqs.user.accessKeyConstructId,
+  keySecretConstructId: env.sqs.user.keySecretConstructId,
 });
 
 app.synth();

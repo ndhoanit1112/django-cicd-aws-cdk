@@ -92,3 +92,21 @@ ecs:
       entryPoint: /bin/sh,-c
       command: celery -A app worker -l INFO -Q dfqueue
       workingDir: /app
+sqs:
+  stackId: DjangoDeploySqsStack
+  mainQueue:
+    constructId: MainQueue
+    name: django-deploy-fib-queue
+    retentionPeriodInDays: 3
+    visibilityTimeoutInHours: 1
+  dlQueue:
+    constructId: DeadLetterQueue
+    name: django-deploy-fib-dl-queue
+    retentionPeriodInDays: 2
+    visibilityTimeoutInHours: 1
+    maxReceiveCount: 2
+  user:
+    constructId: DjangoDeploySqsUser
+    userName: django-deploy-sqs-user
+    accessKeyConstructId: SqsUserAccessKey
+    keySecretConstructId: SqsUserKeySecret

@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import { Construct } from 'constructs';
 
 interface EcsStackProps extends cdk.StackProps {
@@ -11,6 +12,7 @@ interface EcsStackProps extends cdk.StackProps {
   clusterConstructId: string;
   webServiceName: string;
   webServiceConstructId: string;
+  webServiceDesiredCount: number;
   webTaskDefConstructId: string;
   webTaskDefName: string;
   webContainerId: string;
@@ -22,6 +24,7 @@ interface EcsStackProps extends cdk.StackProps {
   nginxImageRepository: ecr.Repository;
   celeryServiceName: string;
   celeryServiceConstructId: string;
+  celeryServiceDesiredCount: number;
   celeryTaskDefConstructId: string;
   celeryTaskDefName: string;
   celeryContainerId: string;
@@ -33,12 +36,15 @@ interface EcsStackProps extends cdk.StackProps {
   volumeName: string;
   webContainerMountPointPath: string;
   nginxContainerMountPointPath: string;
+  privateSecurityGroup: ec2.ISecurityGroup;
+  elbTargetGroup: elbv2.ApplicationTargetGroup;
 }
 
 export class EcsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: EcsStackProps) {
     super(scope, id, props);
 
+    // Cluster and Task definitions
     const cluster = new ecs.Cluster(this, props.clusterConstructId, {
       vpc: props.vpc,
       enableFargateCapacityProviders: true,
@@ -51,11 +57,6 @@ export class EcsStack extends cdk.Stack {
       family: props.webTaskDefName,
     });
 
-    const webappContainer = webTaskDef.addContainer(props.webContainerId, {
-      containerName: props.webContainerName,
-      image: ecs.ContainerImage.fromEcrRepository(props.webImageRepository),
-    });
-
     const nginxContainer = webTaskDef.addContainer(props.nginxContainerId, {
       containerName: props.nginxContainerName,
       image: ecs.ContainerImage.fromEcrRepository(props.nginxImageRepository),
@@ -64,6 +65,11 @@ export class EcsStack extends cdk.Stack {
         appProtocol: ecs.AppProtocol.http,
         name: props.nginxContainerPortMappingName,
       }],
+    });
+
+    const webappContainer = webTaskDef.addContainer(props.webContainerId, {
+      containerName: props.webContainerName,
+      image: ecs.ContainerImage.fromEcrRepository(props.webImageRepository),
     });
 
     const volume = {
@@ -95,6 +101,53 @@ export class EcsStack extends cdk.Stack {
       entryPoint: props.celeryContainerEntryPoint.split(','),
       command: [props.celeryContainerCommand],
       workingDirectory: props.celeryContainerWorkingDir,
+    });
+
+    // Services
+    const webService = new ecs.FargateService(this, props.webServiceConstructId, {
+      cluster: cluster,
+      taskDefinition: webTaskDef,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+      },
+      securityGroups: [props.privateSecurityGroup],
+      serviceName: props.webServiceName,
+      desiredCount: props.webServiceDesiredCount,
+      assignPublicIp: false,
+      capacityProviderStrategies: [
+        {
+          capacityProvider: 'FARGATE_SPOT',
+          weight: props.mode == "dev" ? 1 : 0,
+        },
+        {
+          capacityProvider: 'FARGATE',
+          weight: props.mode == "dev" ? 0 : 1,
+        },
+      ],
+    });
+
+    props.elbTargetGroup.addTarget(webService);
+
+    const celeryService = new ecs.FargateService(this, props.celeryServiceConstructId, {
+      cluster: cluster,
+      taskDefinition: celeryTaskDef,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+      },
+      securityGroups: [props.privateSecurityGroup],
+      serviceName: props.celeryServiceName,
+      desiredCount: props.celeryServiceDesiredCount,
+      assignPublicIp: false,
+      capacityProviderStrategies: [
+        {
+          capacityProvider: 'FARGATE_SPOT',
+          weight: props.mode == "dev" ? 1 : 0,
+        },
+        {
+          capacityProvider: 'FARGATE',
+          weight: props.mode == "dev" ? 0 : 1,
+        },
+      ],
     });
   }
 }

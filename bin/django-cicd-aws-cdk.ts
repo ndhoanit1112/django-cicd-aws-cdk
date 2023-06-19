@@ -81,6 +81,7 @@ const ecsStack = new EcsStack(app, env.ecs.stackId + envSuffix, {
   clusterConstructId: env.ecs.cluster.constructId,
   webServiceName: env.ecs.service.web.name,
   webServiceConstructId: env.ecs.service.web.constructId,
+  webServiceDesiredCount: env.ecs.service.web.desiredCount,
   webTaskDefConstructId: env.ecs.taskDef.web.constructId,
   webTaskDefName: env.ecs.taskDef.web.name,
   webContainerId: env.ecs.container.web.id,
@@ -92,6 +93,7 @@ const ecsStack = new EcsStack(app, env.ecs.stackId + envSuffix, {
   nginxImageRepository: ecrStack.nginxRepository,
   celeryServiceName: env.ecs.service.celery.name,
   celeryServiceConstructId: env.ecs.service.celery.constructId,
+  celeryServiceDesiredCount: env.ecs.service.celery.desiredCount,
   celeryTaskDefConstructId: env.ecs.taskDef.celery.constructId,
   celeryTaskDefName: env.ecs.taskDef.celery.name,
   celeryContainerId: env.ecs.container.celery.id,
@@ -103,6 +105,8 @@ const ecsStack = new EcsStack(app, env.ecs.stackId + envSuffix, {
   volumeName: env.ecs.taskDef.web.storage.volumeName,
   webContainerMountPointPath: env.ecs.taskDef.web.storage.mountPointPath.web,
   nginxContainerMountPointPath: env.ecs.taskDef.web.storage.mountPointPath.nginx,
+  privateSecurityGroup: vpcStack.privateSg,
+  elbTargetGroup: elbStack.targetGroup,
 });
 
 app.synth();

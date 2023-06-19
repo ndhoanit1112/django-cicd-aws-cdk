@@ -61,9 +61,11 @@ ecs:
     web:
       constructId: WebService
       name: django-deploy-web-service
+      desiredCount: 0
     celery:
       constructId: CeleryService
       name: django-deploy-celery-service
+      desiredCount: 0
   taskDef:
     web:
       constructId: WebTaskDefinition

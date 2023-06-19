@@ -81,8 +81,8 @@ export class VpcStack extends cdk.Stack {
       new ec2.Connections({
         securityGroups: [this.publicSg],
       }),
-      ec2.Port.tcp(8000),
-      'allow traffic on port 8000 from public security group',
+      ec2.Port.tcp(80),
+      'allow traffic on port 80 from public security group',
     );
 
     this.bastionSg = new ec2.SecurityGroup(this, props.sgBastionConstructId, {

@@ -15,6 +15,7 @@ interface ElbStackProps extends cdk.StackProps {
 }
 
 export class ElbStack extends cdk.Stack {
+  readonly targetGroup;
   constructor(scope: Construct, id: string, props: ElbStackProps) {
     super(scope, id, props);
 
@@ -28,7 +29,7 @@ export class ElbStack extends cdk.Stack {
       },
     });
 
-    const targetGroup = new elbv2.ApplicationTargetGroup(this, props.targetGroupConstructId, {
+    this.targetGroup = new elbv2.ApplicationTargetGroup(this, props.targetGroupConstructId, {
       targetGroupName: props.targetGroupName,
       targetType: elbv2.TargetType.IP,
       vpc: props.vpc,
@@ -41,7 +42,7 @@ export class ElbStack extends cdk.Stack {
 
     const listener = lb.addListener(props.listenerConstructId, {
       port: 80,
-      defaultTargetGroups: [targetGroup],
+      defaultTargetGroups: [this.targetGroup],
     });
 
     new cdk.CfnOutput(this, 'elbEndpoint', {

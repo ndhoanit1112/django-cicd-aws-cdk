@@ -65,11 +65,17 @@ export class EcsStack extends cdk.Stack {
         appProtocol: ecs.AppProtocol.http,
         name: props.nginxContainerPortMappingName,
       }],
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: 'ecs'
+      }),
     });
 
     const webappContainer = webTaskDef.addContainer(props.webContainerId, {
       containerName: props.webContainerName,
       image: ecs.ContainerImage.fromEcrRepository(props.webImageRepository),
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: 'ecs'
+      }),
     });
 
     const volume = {
@@ -101,6 +107,9 @@ export class EcsStack extends cdk.Stack {
       entryPoint: props.celeryContainerEntryPoint.split(','),
       command: [props.celeryContainerCommand],
       workingDirectory: props.celeryContainerWorkingDir,
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: 'ecs'
+      }),
     });
 
     // Services

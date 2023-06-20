@@ -4,12 +4,18 @@ import { Construct } from 'constructs';
 
 interface EcrStackProps extends cdk.StackProps {
   mode: "dev" | "prod";
-  webappRepoConstructId: string;
-  webappRepoName: string;
-  nginxRepoConstructId: string;
-  nginxRepoName: string;
-  celeryRepoConstructId: string;
-  celeryRepoName: string;
+  webappRepo: {
+    constructId: string;
+    name: string;
+  }
+  nginxRepo: {
+    constructId: string;
+    name: string;
+  }
+  celeryRepo: {
+    constructId: string;
+    name: string;
+  }
 }
 
 export class EcrStack extends cdk.Stack {
@@ -19,8 +25,8 @@ export class EcrStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: EcrStackProps) {
     super(scope, id, props);
 
-    this.webappRepository = new ecr.Repository(this, props.webappRepoConstructId, {
-        repositoryName: props.webappRepoName,
+    this.webappRepository = new ecr.Repository(this, props.webappRepo.constructId, {
+        repositoryName: props.webappRepo.name,
         imageScanOnPush: true,
         removalPolicy: props.mode == "dev" ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
         autoDeleteImages: props.mode == "dev",
@@ -30,8 +36,8 @@ export class EcrStack extends cdk.Stack {
       maxImageAge: cdk.Duration.days(30),
     });
 
-    this.nginxRepository = new ecr.Repository(this, props.nginxRepoConstructId, {
-        repositoryName: props.nginxRepoName,
+    this.nginxRepository = new ecr.Repository(this, props.nginxRepo.constructId, {
+        repositoryName: props.nginxRepo.name,
         removalPolicy: props.mode == "dev" ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
         autoDeleteImages: props.mode == "dev",
     });
@@ -40,8 +46,8 @@ export class EcrStack extends cdk.Stack {
       maxImageAge: cdk.Duration.days(30),
     });
 
-    this.celeryRepository = new ecr.Repository(this, props.celeryRepoConstructId, {
-        repositoryName: props.celeryRepoName,
+    this.celeryRepository = new ecr.Repository(this, props.celeryRepo.constructId, {
+        repositoryName: props.celeryRepo.name,
         removalPolicy: props.mode == "dev" ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
         autoDeleteImages: props.mode == "dev",
     });

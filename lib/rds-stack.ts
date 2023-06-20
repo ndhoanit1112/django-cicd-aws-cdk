@@ -5,27 +5,31 @@ import { Construct } from 'constructs';
 
 interface RdsStackProps extends cdk.StackProps {
   mode: "dev" | "prod";
-  dbName: string;
-  dbConstructId: string;
-  bastionHostName: string;
-  bastionHostConstructId: string;
-  bastionHostKeyName: string;
-  masterUsername: string;
+  db: {
+    constructId: string;
+    dbName: string;
+    masterUsername: string;
+    backupRetention: number;
+    backupPreferredWindow: string;
+    parameterGroupConstructId: string;
+  };
+  bastion: {
+    constructId: string;
+    hostName: string;
+    keyName: string;
+  };
   vpc: ec2.IVpc;
   dbSecurityGroup: ec2.ISecurityGroup;
   bastionSecurityGroup: ec2.ISecurityGroup;
-  parameterGroupConstructId: string;
-  dbBackupRetention: number;
-  dbBackupPreferredWindow: string;
 }
 
 export class RdsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: RdsStackProps) {
     super(scope, id, props);
 
-    const bastionHostInstance = new ec2.Instance(this, props.bastionHostConstructId, {
+    const bastionHostInstance = new ec2.Instance(this, props.bastion.constructId, {
         vpc: props.vpc,
-        instanceName: props.bastionHostName,
+        instanceName: props.bastion.hostName,
         vpcSubnets: {
           subnetType: ec2.SubnetType.PUBLIC,
         },
@@ -37,11 +41,11 @@ export class RdsStack extends cdk.Stack {
         machineImage: new ec2.AmazonLinuxImage({
           generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2
         }),
-        keyName: props.bastionHostKeyName,
+        keyName: props.bastion.keyName,
       });
 
     if (props.mode == "prod") {
-      const parameterGroup = new rds.ParameterGroup(this, props.parameterGroupConstructId, {
+      const parameterGroup = new rds.ParameterGroup(this, props.db.parameterGroupConstructId, {
         engine: rds.DatabaseClusterEngine.AURORA_MYSQL,
         parameters: {
           ["time_zone"]: "Asia/Tokyo",
@@ -55,11 +59,11 @@ export class RdsStack extends cdk.Stack {
         },
       });
 
-      const cluster = new rds.DatabaseCluster(this, props.dbConstructId, {
+      const cluster = new rds.DatabaseCluster(this, props.db.constructId, {
         vpc: props.vpc,
-        clusterIdentifier: props.dbConstructId,
+        clusterIdentifier: props.db.constructId,
         engine: rds.DatabaseClusterEngine.auroraMysql({ version: rds.AuroraMysqlEngineVersion.VER_3_02_2 }),
-        credentials: rds.Credentials.fromGeneratedSecret(props.masterUsername),
+        credentials: rds.Credentials.fromGeneratedSecret(props.db.masterUsername),
         parameterGroup: parameterGroup,
         writer: rds.ClusterInstance.provisioned('writer', {
           publiclyAccessible: false,
@@ -81,11 +85,11 @@ export class RdsStack extends cdk.Stack {
           subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
         },
         securityGroups: [props.dbSecurityGroup],
-        defaultDatabaseName: props.dbName,
+        defaultDatabaseName: props.db.dbName,
         instanceUpdateBehaviour: rds.InstanceUpdateBehaviour.ROLLING,
         backup: {
-          retention: cdk.Duration.days(props.dbBackupRetention),
-          preferredWindow: props.dbBackupPreferredWindow,
+          retention: cdk.Duration.days(props.db.backupRetention),
+          preferredWindow: props.db.backupPreferredWindow,
         }
       });
   
@@ -98,7 +102,7 @@ export class RdsStack extends cdk.Stack {
       });
 
     } else {
-      const parameterGroup = new rds.ParameterGroup(this, props.parameterGroupConstructId, {
+      const parameterGroup = new rds.ParameterGroup(this, props.db.parameterGroupConstructId, {
         engine: rds.DatabaseInstanceEngine.mysql({
           version: rds.MysqlEngineVersion.VER_8_0_32
         }),
@@ -114,7 +118,7 @@ export class RdsStack extends cdk.Stack {
         },
       });
 
-      const dbInstance = new rds.DatabaseInstance(this, props.dbConstructId, {
+      const dbInstance = new rds.DatabaseInstance(this, props.db.constructId, {
         vpc: props.vpc,
         vpcSubnets: {
           subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
@@ -128,7 +132,7 @@ export class RdsStack extends cdk.Stack {
           ec2.InstanceSize.MICRO,
         ),
         parameterGroup: parameterGroup,
-        credentials: rds.Credentials.fromGeneratedSecret(props.masterUsername),
+        credentials: rds.Credentials.fromGeneratedSecret(props.db.masterUsername),
         multiAz: false,
         allocatedStorage: 20,
         maxAllocatedStorage: 1000,
@@ -138,7 +142,7 @@ export class RdsStack extends cdk.Stack {
         deleteAutomatedBackups: true,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         deletionProtection: false,
-        databaseName: props.dbName,
+        databaseName: props.db.dbName,
         publiclyAccessible: false,
       });
   
@@ -150,5 +154,9 @@ export class RdsStack extends cdk.Stack {
         value: dbInstance.secret?.secretName!,
       });
     }
+
+    new cdk.CfnOutput(this, 'bastionHostIP', {
+      value: bastionHostInstance.instancePublicIp,
+    });
   }
 }

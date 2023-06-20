@@ -3,17 +3,30 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 
 interface VpcStackProps extends cdk.StackProps {
-  vpcConstructId: string;
-  vpcName: string;
-  vpcCidr: string;
-  sgPublicConstructId: string;
-  sgPublicName: string;
-  sgPrivateConstructId: string;
-  sgPrivateName: string;
-  sgBastionConstructId: string;
-  sgBastionName: string;
-  sgIsolatedConstructId: string;
-  sgIsolatedName: string;
+  mode: "dev" | "prod";
+  vpc: {
+    constructId: string;
+    name: string;
+    cidr: string;
+  };
+  securityGroup: {
+    public: {
+      constructId: string;
+      name: string;
+    };
+    private: {
+      constructId: string;
+      name: string;
+    };
+    bastion: {
+      constructId: string;
+      name: string;
+    };
+    isolated: {
+      constructId: string;
+      name: string;
+    };
+  };
 }
 
 export class VpcStack extends cdk.Stack {
@@ -25,9 +38,9 @@ export class VpcStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: VpcStackProps) {
     super(scope, id, props);
 
-    this.vpc = new ec2.Vpc(this, props.vpcConstructId, {
-      ipAddresses: ec2.IpAddresses.cidr(props.vpcCidr),
-      vpcName: props.vpcName,
+    this.vpc = new ec2.Vpc(this, props.vpc.constructId, {
+      ipAddresses: ec2.IpAddresses.cidr(props.vpc.cidr),
+      vpcName: props.vpc.name,
       maxAzs: 2,
       subnetConfiguration: [
         {
@@ -46,15 +59,15 @@ export class VpcStack extends cdk.Stack {
           cidrMask: 20,
         },
       ],
-      natGateways: 1,
+      natGateways: props.mode == "dev" ? 1 : 2,
       enableDnsHostnames: true,
       enableDnsSupport: true,
     });
 
-    this.publicSg = new ec2.SecurityGroup(this, props.sgPublicConstructId, {
+    this.publicSg = new ec2.SecurityGroup(this, props.securityGroup.public.constructId, {
       vpc: this.vpc,
       allowAllOutbound: true,
-      securityGroupName: props.sgPublicName,
+      securityGroupName: props.securityGroup.public.name,
       description: 'Security group for public resources',
     });
 
@@ -70,10 +83,10 @@ export class VpcStack extends cdk.Stack {
       'allow HTTPS traffic from anywhere',
     );
 
-    this.privateSg = new ec2.SecurityGroup(this, props.sgPrivateConstructId, {
+    this.privateSg = new ec2.SecurityGroup(this, props.securityGroup.private.constructId, {
       vpc: this.vpc,
       allowAllOutbound: true,
-      securityGroupName: props.sgPrivateName,
+      securityGroupName: props.securityGroup.private.name,
       description: 'Security group for private resources (ecs containers)',
     });
 
@@ -85,10 +98,10 @@ export class VpcStack extends cdk.Stack {
       'allow traffic on port 80 from public security group',
     );
 
-    this.bastionSg = new ec2.SecurityGroup(this, props.sgBastionConstructId, {
+    this.bastionSg = new ec2.SecurityGroup(this, props.securityGroup.bastion.constructId, {
       vpc: this.vpc,
       allowAllOutbound: true,
-      securityGroupName: props.sgBastionName,
+      securityGroupName: props.securityGroup.bastion.name,
       description: 'Security group for bastion host (SSH tunel)'
     });
 
@@ -98,10 +111,10 @@ export class VpcStack extends cdk.Stack {
       'allow SSH traffic from anywhere'
     );
 
-    this.isolatedSg = new ec2.SecurityGroup(this, props.sgIsolatedConstructId, {
+    this.isolatedSg = new ec2.SecurityGroup(this, props.securityGroup.isolated.constructId, {
       vpc:this.vpc,
       allowAllOutbound: true,
-      securityGroupName: props.sgIsolatedName,
+      securityGroupName: props.securityGroup.isolated.name,
       description: 'Security group for isolated resources (db)',
     });
 

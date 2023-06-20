@@ -5,45 +5,51 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 
 interface SqsStackProps extends cdk.StackProps {
-  mainQueueConstructId: string;
-  mainQueueName: string;
-  mainQueueRetentionPeriod: number;
-  mainQueueVisibilityTimeout: number;
-  dlQueueConstructId: string;
-  dlQueueName: string;
-  dlQueueRetentionPeriod: number;
-  dlQueueVisibilityTimeout: number;
-  dlQueueMaxReceiveCount: number;
-  userConstructId: string;
-  userName: string;
-  accessKeyConstructId: string;
-  keySecretConstructId: string;
+  mainQueue: {
+    constructId: string;
+    name: string;
+    retentionPeriodInDays: number;
+    visibilityTimeoutInHours: number;
+  };
+  dlQueue: {
+    constructId: string;
+    name: string;
+    retentionPeriodInDays: number;
+    visibilityTimeoutInHours: number;
+    maxReceiveCount: number;
+  };
+  user: {
+    constructId: string;
+    userName: string;
+    accessKeyConstructId: string;
+    keySecretConstructId: string;
+  };
 }
 
 export class SqsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: SqsStackProps) {
     super(scope, id, props);
 
-    const deadLetterQueue = new sqs.Queue(this, props.dlQueueConstructId, {
-      queueName: props.dlQueueName,
+    const deadLetterQueue = new sqs.Queue(this, props.dlQueue.constructId, {
+      queueName: props.dlQueue.name,
       encryption: sqs.QueueEncryption.SQS_MANAGED,
-      retentionPeriod: cdk.Duration.days(props.dlQueueRetentionPeriod),
-      visibilityTimeout: cdk.Duration.hours(props.dlQueueVisibilityTimeout),
+      retentionPeriod: cdk.Duration.days(props.dlQueue.retentionPeriodInDays),
+      visibilityTimeout: cdk.Duration.hours(props.dlQueue.visibilityTimeoutInHours),
     });
 
-    const mainQueue = new sqs.Queue(this, props.mainQueueConstructId, {
-      queueName: props.mainQueueName,
+    const mainQueue = new sqs.Queue(this, props.mainQueue.constructId, {
+      queueName: props.mainQueue.name,
       encryption: sqs.QueueEncryption.SQS_MANAGED,
-      retentionPeriod: cdk.Duration.days(props.mainQueueRetentionPeriod),
-      visibilityTimeout: cdk.Duration.hours(props.mainQueueVisibilityTimeout),
+      retentionPeriod: cdk.Duration.days(props.mainQueue.retentionPeriodInDays),
+      visibilityTimeout: cdk.Duration.hours(props.mainQueue.visibilityTimeoutInHours),
       deadLetterQueue: {
         queue: deadLetterQueue,
-        maxReceiveCount: props.dlQueueMaxReceiveCount,
+        maxReceiveCount: props.dlQueue.maxReceiveCount,
       },
     });
 
-    const user = new iam.User(this, props.userConstructId, {
-      userName: props.userName,
+    const user = new iam.User(this, props.user.constructId, {
+      userName: props.user.userName,
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName(
           "AmazonSQSFullAccess"
@@ -51,8 +57,8 @@ export class SqsStack extends cdk.Stack {
       ],
     });
 
-    const accessKey = new iam.AccessKey(this, props.accessKeyConstructId, { user });
-    const secret = new secretsmanager.Secret(this, props.keySecretConstructId, {
+    const accessKey = new iam.AccessKey(this, props.user.accessKeyConstructId, { user });
+    const secret = new secretsmanager.Secret(this, props.user.keySecretConstructId, {
       secretStringValue: accessKey.secretAccessKey,
     });
 

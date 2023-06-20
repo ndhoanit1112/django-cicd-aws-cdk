@@ -8,34 +8,60 @@ import { Construct } from 'constructs';
 interface EcsStackProps extends cdk.StackProps {
   mode: "dev" | "prod";
   vpc: ec2.IVpc;
-  clusterName: string;
-  clusterConstructId: string;
-  webServiceName: string;
-  webServiceConstructId: string;
-  webServiceDesiredCount: number;
-  webTaskDefConstructId: string;
-  webTaskDefName: string;
-  webContainerId: string;
-  webContainerName: string;
+  cluster: {
+    constructId: string;
+    name: string;
+  };
+  service: {
+    web: {
+      constructId: string;
+      name: string;
+      desiredCount: number;
+    };
+    celery: {
+      constructId: string;
+      name: string;
+      desiredCount: number;
+    };
+  };
+  taskDef: {
+    web: {
+      constructId: string;
+      name: string;
+      storage: {
+        volumeName: string;
+        mountPointPath: {
+          web: string;
+          nginx: string;
+        };
+      };
+    };
+    celery: {
+      constructId: string;
+      name: string;
+    };
+  };
+  container: {
+    web: {
+      id: string;
+      name: string;
+    };
+    nginx: {
+      id: string;
+      name: string;
+      portMappingName: string;
+    };
+    celery: {
+      id: string;
+      name: string;
+      entryPoint: string;
+      command: string;
+      workingDir: string;
+    };
+  };
   webImageRepository: ecr.Repository;
-  nginxContainerId: string;
-  nginxContainerName: string;
-  nginxContainerPortMappingName: string;
   nginxImageRepository: ecr.Repository;
-  celeryServiceName: string;
-  celeryServiceConstructId: string;
-  celeryServiceDesiredCount: number;
-  celeryTaskDefConstructId: string;
-  celeryTaskDefName: string;
-  celeryContainerId: string;
-  celeryContainerName: string;
-  celeryContainerEntryPoint: string;
-  celeryContainerCommand: string;
-  celeryContainerWorkingDir: string;
   celeryImageRepository: ecr.Repository;
-  volumeName: string;
-  webContainerMountPointPath: string;
-  nginxContainerMountPointPath: string;
   privateSecurityGroup: ec2.ISecurityGroup;
   elbTargetGroup: elbv2.ApplicationTargetGroup;
 }
@@ -45,33 +71,34 @@ export class EcsStack extends cdk.Stack {
     super(scope, id, props);
 
     // Cluster and Task definitions
-    const cluster = new ecs.Cluster(this, props.clusterConstructId, {
+    const cluster = new ecs.Cluster(this, props.cluster.constructId, {
       vpc: props.vpc,
+      clusterName: props.cluster.name,
       enableFargateCapacityProviders: true,
     });
 
-    const webTaskDef = new ecs.FargateTaskDefinition(this, props.webTaskDefConstructId, {
+    const webTaskDef = new ecs.FargateTaskDefinition(this, props.taskDef.web.constructId, {
       cpu: 256,
       memoryLimitMiB: 512,
       ephemeralStorageGiB: 21,
-      family: props.webTaskDefName,
+      family: props.taskDef.web.name,
     });
 
-    const nginxContainer = webTaskDef.addContainer(props.nginxContainerId, {
-      containerName: props.nginxContainerName,
+    const nginxContainer = webTaskDef.addContainer(props.container.nginx.id, {
+      containerName: props.container.nginx.name,
       image: ecs.ContainerImage.fromEcrRepository(props.nginxImageRepository),
       portMappings: [{
         containerPort: 80,
         appProtocol: ecs.AppProtocol.http,
-        name: props.nginxContainerPortMappingName,
+        name: props.container.nginx.portMappingName,
       }],
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'ecs'
       }),
     });
 
-    const webappContainer = webTaskDef.addContainer(props.webContainerId, {
-      containerName: props.webContainerName,
+    const webappContainer = webTaskDef.addContainer(props.container.web.id, {
+      containerName: props.container.web.name,
       image: ecs.ContainerImage.fromEcrRepository(props.webImageRepository),
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'ecs'
@@ -79,49 +106,49 @@ export class EcsStack extends cdk.Stack {
     });
 
     const volume = {
-      name: props.volumeName,
+      name: props.taskDef.web.storage.volumeName,
     };
 
     webTaskDef.addVolume(volume);
     webappContainer.addMountPoints({
-      containerPath: props.webContainerMountPointPath,
+      containerPath: props.taskDef.web.storage.mountPointPath.web,
       readOnly: false,
-      sourceVolume: props.volumeName
+      sourceVolume: props.taskDef.web.storage.volumeName,
     });
     nginxContainer.addMountPoints({
-      containerPath: props.nginxContainerMountPointPath,
+      containerPath: props.taskDef.web.storage.mountPointPath.nginx,
       readOnly: false,
-      sourceVolume: props.volumeName
+      sourceVolume: props.taskDef.web.storage.volumeName,
     });
 
-    const celeryTaskDef = new ecs.FargateTaskDefinition(this, props.celeryTaskDefConstructId, {
+    const celeryTaskDef = new ecs.FargateTaskDefinition(this, props.taskDef.celery.constructId, {
       cpu: 256,
       memoryLimitMiB: 512,
       ephemeralStorageGiB: 21,
-      family: props.celeryTaskDefName,
+      family: props.taskDef.celery.name,
     });
 
-    celeryTaskDef.addContainer(props.celeryContainerId, {
-      containerName: props.celeryContainerName,
+    celeryTaskDef.addContainer(props.container.celery.id, {
+      containerName: props.container.celery.name,
       image: ecs.ContainerImage.fromEcrRepository(props.celeryImageRepository),
-      entryPoint: props.celeryContainerEntryPoint.split(','),
-      command: [props.celeryContainerCommand],
-      workingDirectory: props.celeryContainerWorkingDir,
+      entryPoint: props.container.celery.entryPoint.split(','),
+      command: [props.container.celery.command],
+      workingDirectory: props.container.celery.workingDir,
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'ecs'
       }),
     });
 
     // Services
-    const webService = new ecs.FargateService(this, props.webServiceConstructId, {
+    const webService = new ecs.FargateService(this, props.service.web.constructId, {
       cluster: cluster,
       taskDefinition: webTaskDef,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
       securityGroups: [props.privateSecurityGroup],
-      serviceName: props.webServiceName,
-      desiredCount: props.webServiceDesiredCount,
+      serviceName: props.service.web.name,
+      desiredCount: props.service.web.desiredCount,
       assignPublicIp: false,
       capacityProviderStrategies: [
         {
@@ -137,15 +164,15 @@ export class EcsStack extends cdk.Stack {
 
     props.elbTargetGroup.addTarget(webService);
 
-    const celeryService = new ecs.FargateService(this, props.celeryServiceConstructId, {
+    const celeryService = new ecs.FargateService(this, props.service.celery.constructId, {
       cluster: cluster,
       taskDefinition: celeryTaskDef,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
       securityGroups: [props.privateSecurityGroup],
-      serviceName: props.celeryServiceName,
-      desiredCount: props.celeryServiceDesiredCount,
+      serviceName: props.service.celery.name,
+      desiredCount: props.service.celery.desiredCount,
       assignPublicIp: false,
       capacityProviderStrategies: [
         {

@@ -1,9 +1,10 @@
 region: us-east-2
 vpc:
   stackId: DjangoDeployVpcStack
-  constructId: DjangoDeployVpc
-  name: django-deploy-vpc
-  cidr: 10.0.0.0/16
+  vpc:
+    constructId: DjangoDeployVpc
+    name: django-deploy-vpc
+    cidr: 10.0.0.0/16
   securityGroup:
     public:
       constructId: PublicSecurityGroup
@@ -31,14 +32,14 @@ rds:
     hostName: django-deploy-bastion-ec2
     keyName: django-deploy-bastion-key
 ecr:
-  stackId: DjangoDeployEcr
-  webapp:
+  stackId: DjangoDeployEcrStack
+  webappRepo:
     constructId: WebappEcrRepo
     name: django-deploy-webapp-repo
-  nginx:
+  nginxRepo:
     constructId: NginxEcrRepo
     name: django-deploy-nginx-repo
-  celery:
+  celeryRepo:
     constructId: CeleryEcrRepo
     name: django-deploy-celery-repo
 elb:

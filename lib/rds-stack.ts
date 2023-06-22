@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 interface RdsStackProps extends cdk.StackProps {
@@ -18,12 +19,20 @@ interface RdsStackProps extends cdk.StackProps {
     hostName: string;
     keyName: string;
   };
+  dbSecret: secretsmanager.ISecret;
   vpc: ec2.IVpc;
   dbSecurityGroup: ec2.ISecurityGroup;
   bastionSecurityGroup: ec2.ISecurityGroup;
 }
 
+export interface DbInfo {
+  name: string;
+  endpoint: string;
+  port: number;
+}
+
 export class RdsStack extends cdk.Stack {
+  readonly dbInfo: DbInfo;
   constructor(scope: Construct, id: string, props: RdsStackProps) {
     super(scope, id, props);
 
@@ -63,7 +72,10 @@ export class RdsStack extends cdk.Stack {
         vpc: props.vpc,
         clusterIdentifier: props.db.constructId,
         engine: rds.DatabaseClusterEngine.auroraMysql({ version: rds.AuroraMysqlEngineVersion.VER_3_02_2 }),
-        credentials: rds.Credentials.fromGeneratedSecret(props.db.masterUsername),
+        credentials: rds.Credentials.fromPassword(
+          props.dbSecret.secretValueFromJson("username").unsafeUnwrap(),
+          props.dbSecret.secretValueFromJson("password"),
+        ),
         parameterGroup: parameterGroup,
         writer: rds.ClusterInstance.provisioned('writer', {
           publiclyAccessible: false,
@@ -92,14 +104,12 @@ export class RdsStack extends cdk.Stack {
           preferredWindow: props.db.backupPreferredWindow,
         }
       });
-  
-      new cdk.CfnOutput(this, 'clusterEndpoint', {
-        value: cluster.clusterEndpoint.hostname,
-      });
-  
-      new cdk.CfnOutput(this, 'secretName', {
-        value: cluster.secret?.secretName!,
-      });
+
+      this.dbInfo = {
+        name: props.db.dbName,
+        endpoint: cluster.clusterEndpoint.hostname,
+        port: cluster.clusterEndpoint.port,
+      };
 
     } else {
       const parameterGroup = new rds.ParameterGroup(this, props.db.parameterGroupConstructId, {
@@ -132,7 +142,10 @@ export class RdsStack extends cdk.Stack {
           ec2.InstanceSize.MICRO,
         ),
         parameterGroup: parameterGroup,
-        credentials: rds.Credentials.fromGeneratedSecret(props.db.masterUsername),
+        credentials: rds.Credentials.fromPassword(
+          props.dbSecret.secretValueFromJson("username").unsafeUnwrap(),
+          props.dbSecret.secretValueFromJson("password"),
+        ),
         multiAz: false,
         allocatedStorage: 20,
         maxAllocatedStorage: 1000,
@@ -145,15 +158,17 @@ export class RdsStack extends cdk.Stack {
         databaseName: props.db.dbName,
         publiclyAccessible: false,
       });
-  
-      new cdk.CfnOutput(this, 'dbEndpoint', {
-        value: dbInstance.instanceEndpoint.hostname,
-      });
-  
-      new cdk.CfnOutput(this, 'secretName', {
-        value: dbInstance.secret?.secretName!,
-      });
+
+      this.dbInfo = {
+        name: props.db.dbName,
+        endpoint: dbInstance.instanceEndpoint.hostname,
+        port: dbInstance.instanceEndpoint.port,
+      };
     }
+  
+    new cdk.CfnOutput(this, 'dbEndpoint', {
+      value: this.dbInfo.endpoint,
+    });
 
     new cdk.CfnOutput(this, 'bastionHostIP', {
       value: bastionHostInstance.instancePublicIp,

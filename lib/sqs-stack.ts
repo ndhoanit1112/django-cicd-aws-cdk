@@ -27,6 +27,8 @@ interface SqsStackProps extends cdk.StackProps {
 }
 
 export class SqsStack extends cdk.Stack {
+  readonly userAccessKey: string;
+  readonly userSecret: secretsmanager.ISecret;
   constructor(scope: Construct, id: string, props: SqsStackProps) {
     super(scope, id, props);
 
@@ -58,16 +60,19 @@ export class SqsStack extends cdk.Stack {
     });
 
     const accessKey = new iam.AccessKey(this, props.user.accessKeyConstructId, { user });
-    const secret = new secretsmanager.Secret(this, props.user.keySecretConstructId, {
+    this.userSecret = new secretsmanager.Secret(this, props.user.keySecretConstructId, {
       secretStringValue: accessKey.secretAccessKey,
     });
 
+    this.userAccessKey = accessKey.accessKeyId;
+    // this.userSecret = secret.secretName;
+
     new cdk.CfnOutput(this, 'userAccessKey', {
-      value: accessKey.accessKeyId,
+      value: this.userAccessKey,
     });
 
     new cdk.CfnOutput(this, 'userKeySecretName', {
-      value: secret.secretName,
+      value: this.userSecret.secretName,
     });
   }
 }

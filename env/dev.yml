@@ -18,6 +18,13 @@ vpc:
     isolated:
       constructId: IsolatedSecurityGroup
       name: django-deploy-isolated-sg
+secretsManager:
+  stackId: DjangoDeploySecretsManagerStack
+  djangoSecret:
+    constructId: DjangoSecret
+  dbSecret:
+    constructId: DatabaseSecret
+    username: root
 rds:
   stackId: DjangoDeployRdsStack
   db:
@@ -111,3 +118,12 @@ sqs:
     userName: django-deploy-sqs-user
     accessKeyConstructId: SqsUserAccessKey
     keySecretConstructId: SqsUserKeySecret
+pipeline:
+  stackId: DjangoDeployPipelineStack
+  buildProject:
+    web:
+      constructId: WebBuildProject
+      buildSpecFile: buildspec.yml
+      logGroup:
+        constructId: WebBuildPjtLogGroup
+        name: django-deploy-web-build-pjt-lg

@@ -8,6 +8,8 @@ import { EcrStack } from '../lib/ecr-stack';
 import { ElbStack } from '../lib/elb-stack';
 import { EcsStack } from '../lib/ecs-stack';
 import { SqsStack } from '../lib/sqs-stack';
+import { PipelineStack, PipelineStackProps } from '../lib/pipeline-stack';
+import { SecretsManagerStack } from '../lib/secrets-manager-stack';
 
 const app = new cdk.App();
 const mode = process.env.MODE === "prod" ? "prod" : "dev";
@@ -25,9 +27,15 @@ const vpcStack = new VpcStack(app, env.vpc.stackId + envSuffix, {
   ...env.vpc
 });
 
+const secretsManagerStack = new SecretsManagerStack(app, env.secretsManager.stackId + envSuffix, {
+  env: stackDeployEnv,
+  ...env.secretsManager
+});
+
 const rdsStack = new RdsStack(app, env.rds.stackId + envSuffix, {
   env: stackDeployEnv,
   mode: mode,
+  dbSecret: secretsManagerStack.dbSecret,
   vpc: vpcStack.vpc,
   dbSecurityGroup: vpcStack.isolatedSg,
   bastionSecurityGroup: vpcStack.bastionSg,
@@ -63,6 +71,32 @@ const sqsStack = new SqsStack(app, env.sqs.stackId + envSuffix, {
   env: stackDeployEnv,
   ...env.sqs
 });
+
+const pipelineProps: PipelineStackProps = {
+  env: stackDeployEnv,
+  mode: mode,
+  vpc: vpcStack.vpc,
+  privateSg: vpcStack.privateSg,
+  ...env.pipeline
+};
+
+pipelineProps.buildProject.common = {
+  env: {
+    dbInfo: rdsStack.dbInfo,
+    dbSecret: secretsManagerStack.dbSecret,
+    djangoSecret: secretsManagerStack.djangoSecret,
+    sqsAccessKey: sqsStack.userAccessKey,
+    sqsSecret: sqsStack.userSecret,
+    sqsRegion: stackDeployEnv.region,
+  },
+};
+
+pipelineProps.buildProject.web.env = {
+  containerName: env.ecs.container.web.name,
+  ecrRepoUri: ecrStack.webappRepository.repositoryUri,
+};
+
+const pipelineStack = new PipelineStack(app, env.pipeline.stackId + envSuffix, pipelineProps);
 
 app.synth();
 

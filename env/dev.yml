@@ -25,6 +25,12 @@ secretsManager:
   dbSecret:
     constructId: DatabaseSecret
     username: root
+  sqsUserSecret:
+    constructId: SqsUserSecret
+    user:
+      constructId: DjangoDeploySqsUser
+      userName: django-deploy-sqs-user
+      accessKeyConstructId: SqsUserAccessKey
 rds:
   stackId: DjangoDeployRdsStack
   db:
@@ -113,11 +119,6 @@ sqs:
     retentionPeriodInDays: 2
     visibilityTimeoutInHours: 1
     maxReceiveCount: 2
-  user:
-    constructId: DjangoDeploySqsUser
-    userName: django-deploy-sqs-user
-    accessKeyConstructId: SqsUserAccessKey
-    keySecretConstructId: SqsUserKeySecret
 pipeline:
   stackId: DjangoDeployPipelineStack
   buildProject:

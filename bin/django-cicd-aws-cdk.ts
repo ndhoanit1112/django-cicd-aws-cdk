@@ -85,8 +85,7 @@ pipelineProps.buildProject.common = {
     dbInfo: rdsStack.dbInfo,
     dbSecret: secretsManagerStack.dbSecret,
     djangoSecret: secretsManagerStack.djangoSecret,
-    sqsAccessKey: sqsStack.userAccessKey,
-    sqsSecret: sqsStack.userSecret,
+    sqsUserSecret: secretsManagerStack.sqsUserSecret,
     sqsRegion: stackDeployEnv.region,
   },
 };

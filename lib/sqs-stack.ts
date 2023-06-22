@@ -1,6 +1,4 @@
 import * as cdk from 'aws-cdk-lib';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 
@@ -18,17 +16,9 @@ interface SqsStackProps extends cdk.StackProps {
     visibilityTimeoutInHours: number;
     maxReceiveCount: number;
   };
-  user: {
-    constructId: string;
-    userName: string;
-    accessKeyConstructId: string;
-    keySecretConstructId: string;
-  };
 }
 
 export class SqsStack extends cdk.Stack {
-  readonly userAccessKey: string;
-  readonly userSecret: secretsmanager.ISecret;
   constructor(scope: Construct, id: string, props: SqsStackProps) {
     super(scope, id, props);
 
@@ -48,31 +38,6 @@ export class SqsStack extends cdk.Stack {
         queue: deadLetterQueue,
         maxReceiveCount: props.dlQueue.maxReceiveCount,
       },
-    });
-
-    const user = new iam.User(this, props.user.constructId, {
-      userName: props.user.userName,
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName(
-          "AmazonSQSFullAccess"
-        ),
-      ],
-    });
-
-    const accessKey = new iam.AccessKey(this, props.user.accessKeyConstructId, { user });
-    this.userSecret = new secretsmanager.Secret(this, props.user.keySecretConstructId, {
-      secretStringValue: accessKey.secretAccessKey,
-    });
-
-    this.userAccessKey = accessKey.accessKeyId;
-    // this.userSecret = secret.secretName;
-
-    new cdk.CfnOutput(this, 'userAccessKey', {
-      value: this.userAccessKey,
-    });
-
-    new cdk.CfnOutput(this, 'userKeySecretName', {
-      value: this.userSecret.secretName,
     });
   }
 }

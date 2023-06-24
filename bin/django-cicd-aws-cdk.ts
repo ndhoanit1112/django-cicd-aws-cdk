@@ -77,22 +77,27 @@ const pipelineProps: PipelineStackProps = {
   mode: mode,
   vpc: vpcStack.vpc,
   privateSg: vpcStack.privateSg,
+  webService: ecsStack.webService,
+  celeryService: ecsStack.celeryService,
+  webEcrRepository: ecrStack.webappRepository,
+  celeryEcrRepository: ecrStack.celeryRepository,
   ...env.pipeline
 };
 
-pipelineProps.buildProject.common = {
-  env: {
-    dbInfo: rdsStack.dbInfo,
-    dbSecret: secretsManagerStack.dbSecret,
-    djangoSecret: secretsManagerStack.djangoSecret,
-    sqsUserSecret: secretsManagerStack.sqsUserSecret,
-    sqsRegion: stackDeployEnv.region,
+pipelineProps.buildProject.env = {
+  web: {
+    containerName: env.ecs.container.web.name,
+    ecrRepoUri: ecrStack.webappRepository.repositoryUri,
   },
-};
-
-pipelineProps.buildProject.web.env = {
-  containerName: env.ecs.container.web.name,
-  ecrRepoUri: ecrStack.webappRepository.repositoryUri,
+  celery: {
+    containerName: env.ecs.container.celery.name,
+    ecrRepoUri: ecrStack.celeryRepository.repositoryUri,
+  },
+  dbInfo: rdsStack.dbInfo,
+  dbSecret: secretsManagerStack.dbSecret,
+  djangoSecret: secretsManagerStack.djangoSecret,
+  sqsUserSecret: secretsManagerStack.sqsUserSecret,
+  sqsRegion: stackDeployEnv.region,
 };
 
 const pipelineStack = new PipelineStack(app, env.pipeline.stackId + envSuffix, pipelineProps);

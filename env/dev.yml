@@ -104,7 +104,7 @@ ecs:
       id: CeleryContainer
       name: django-deploy-celery-container
       entryPoint: /bin/sh,-c
-      command: celery -A app worker -l INFO -Q dfqueue
+      command: celery -A app worker -l INFO -Q fib-queue
       workingDir: /app
 sqs:
   stackId: DjangoDeploySqsStack
@@ -121,10 +121,18 @@ sqs:
     maxReceiveCount: 2
 pipeline:
   stackId: DjangoDeployPipelineStack
+  pipeline:
+    constructId: Pipeline
+    name: django-deploy-pipeline
   buildProject:
-    web:
-      constructId: WebBuildProject
-      buildSpecFile: buildspec.yml
-      logGroup:
-        constructId: WebBuildPjtLogGroup
-        name: django-deploy-web-build-pjt-lg
+    constructId: BuildProject
+    buildSpecFile:
+      dev: buildspec_dev.yml
+      prod: buildspec_prod.yml
+    logGroup:
+      constructId: BuildPjtLogGroup
+      name: django-deploy-build-pjt-lg
+  source:
+    repoName: django-cicd-aws
+    owner: ndhoanit1112
+    connectionArn: arn:aws:codestar-connections:us-east-1:511448762819:connection/950b3c31-1045-4558-8d12-08b6387fbca0

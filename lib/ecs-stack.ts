@@ -67,6 +67,8 @@ interface EcsStackProps extends cdk.StackProps {
 }
 
 export class EcsStack extends cdk.Stack {
+  readonly webService: ecs.FargateService;
+  readonly celeryService: ecs.FargateService;
   constructor(scope: Construct, id: string, props: EcsStackProps) {
     super(scope, id, props);
 
@@ -140,7 +142,7 @@ export class EcsStack extends cdk.Stack {
     });
 
     // Services
-    const webService = new ecs.FargateService(this, props.service.web.constructId, {
+    this.webService = new ecs.FargateService(this, props.service.web.constructId, {
       cluster: cluster,
       taskDefinition: webTaskDef,
       vpcSubnets: {
@@ -162,9 +164,9 @@ export class EcsStack extends cdk.Stack {
       ],
     });
 
-    props.elbTargetGroup.addTarget(webService);
+    props.elbTargetGroup.addTarget(this.webService);
 
-    const celeryService = new ecs.FargateService(this, props.service.celery.constructId, {
+    this.celeryService = new ecs.FargateService(this, props.service.celery.constructId, {
       cluster: cluster,
       taskDefinition: celeryTaskDef,
       vpcSubnets: {

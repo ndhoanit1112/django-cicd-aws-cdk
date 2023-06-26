@@ -55,7 +55,9 @@ export class RdsStack extends cdk.Stack {
 
     if (props.mode == "prod") {
       const parameterGroup = new rds.ParameterGroup(this, props.db.parameterGroupConstructId, {
-        engine: rds.DatabaseClusterEngine.AURORA_MYSQL,
+        engine: rds.DatabaseClusterEngine.auroraMysql({
+          version: rds.AuroraMysqlEngineVersion.VER_3_02_2,
+        }),
         parameters: {
           ["time_zone"]: "Asia/Tokyo",
           ["general_log"]: "1",
@@ -81,7 +83,7 @@ export class RdsStack extends cdk.Stack {
           publiclyAccessible: false,
           instanceType: ec2.InstanceType.of(
             ec2.InstanceClass.T3,
-            ec2.InstanceSize.MICRO,
+            ec2.InstanceSize.MEDIUM,
           ),
         }),
         readers: [
@@ -89,7 +91,7 @@ export class RdsStack extends cdk.Stack {
             promotionTier: 1,
             instanceType: ec2.InstanceType.of(
               ec2.InstanceClass.T3,
-              ec2.InstanceSize.MICRO,
+              ec2.InstanceSize.MEDIUM,
             ),
           }),
         ],

@@ -12,7 +12,7 @@ import { PipelineStack, PipelineStackProps } from '../lib/pipeline-stack';
 import { SecretsManagerStack } from '../lib/secrets-manager-stack';
 
 const app = new cdk.App();
-const mode = process.env.MODE === "prod" ? "prod" : "dev";
+const mode = process.env.DEPLOY_ENV === "prod" ? "prod" : "dev";
 const env = loadEnvironmentVariablesFile(mode);
 const envSuffix = mode == "dev" ? "-dev" : "";
 

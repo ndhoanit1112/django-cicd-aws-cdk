@@ -1,0 +1,138 @@
+region: us-east-1
+vpc:
+  stackId: DjangoDeployVpcStack
+  vpc:
+    constructId: DjangoDeployVpc
+    name: django-deploy-vpc
+    cidr: 10.0.0.0/16
+  securityGroup:
+    public:
+      constructId: PublicSecurityGroup
+      name: django-deploy-public-sg
+    private:
+      constructId: PrivateSecurityGroup
+      name: django-deploy-private-sg
+    bastion:
+      constructId: BastionSecurityGroup
+      name: django-deploy-bastion-sg
+    isolated:
+      constructId: IsolatedSecurityGroup
+      name: django-deploy-isolated-sg
+secretsManager:
+  stackId: DjangoDeploySecretsManagerStack
+  djangoSecret:
+    constructId: DjangoSecret
+  dbSecret:
+    constructId: DatabaseSecret
+    username: root
+  sqsUserSecret:
+    constructId: SqsUserSecret
+    user:
+      constructId: DjangoDeploySqsUser
+      userName: django-deploy-sqs-user-prod
+      accessKeyConstructId: SqsUserAccessKey
+rds:
+  stackId: DjangoDeployRdsStack
+  db:
+    constructId: DjangoDeployRds
+    dbName: db_django_deploy
+    masterUsername: root
+    backupRetention: 7
+    backupPreferredWindow: "18:00-20:00"
+    parameterGroupConstructId: DjangoDeployRdsParameterGroup
+  bastion:
+    constructId: DjangoDeployBastionHost
+    hostName: django-deploy-bastion-ec2
+    keyName: django-deploy-bastion
+ecr:
+  stackId: DjangoDeployEcrStack
+  webappRepo:
+    constructId: WebappEcrRepo
+    name: django-deploy-webapp-repo
+  nginxRepo:
+    constructId: NginxEcrRepo
+    name: django-deploy-nginx-repo
+  celeryRepo:
+    constructId: CeleryEcrRepo
+    name: django-deploy-celery-repo
+elb:
+  stackId: DjangoDeployElbStack
+  lb:
+    constructId: DjangoDeployElb
+    name: django-deploy-elb
+  listener:
+    constructId: DjangoDeployElbListener
+  targetGroup:
+    constructId: DjangoDeployTg
+    name: django-deploy-tg
+    healthCheckPath: /polls/healthcheck/
+ecs:
+  stackId: DjangoDeployEcsStack
+  cluster:
+    constructId: DjangoDeployCluster
+    name: django-deploy-cluster
+  service:
+    web:
+      constructId: WebService
+      name: django-deploy-web-service
+      desiredCount: 0
+    celery:
+      constructId: CeleryService
+      name: django-deploy-celery-service
+      desiredCount: 0
+  taskDef:
+    web:
+      constructId: WebTaskDefinition
+      name: django-deploy-web-td
+      storage:
+        volumeName: gunicorn
+        mountPointPath:
+          web: /var/run/gunicorn
+          nginx: /var/run/gunicorn
+    celery:
+      constructId: CeleryTaskDefinition
+      name: django-deploy-celery-td
+  container:
+    web:
+      id: WebContainer
+      name: django-deploy-web-container
+    nginx:
+      id: NginxContainer
+      name: django-deploy-nginx-container
+      portMappingName: nginx-80-tcp
+    celery:
+      id: CeleryContainer
+      name: django-deploy-celery-container
+      entryPoint: /bin/sh,-c
+      command: celery -A app worker -l INFO -Q fib-queue
+      workingDir: /app
+sqs:
+  stackId: DjangoDeploySqsStack
+  mainQueue:
+    constructId: MainQueue
+    name: django-deploy-fib-queue
+    retentionPeriodInDays: 3
+    visibilityTimeoutInHours: 1
+  dlQueue:
+    constructId: DeadLetterQueue
+    name: django-deploy-fib-dl-queue
+    retentionPeriodInDays: 2
+    visibilityTimeoutInHours: 1
+    maxReceiveCount: 2
+pipeline:
+  stackId: DjangoDeployPipelineStack
+  pipeline:
+    constructId: Pipeline
+    name: django-deploy-pipeline
+  buildProject:
+    constructId: BuildProject
+    buildSpecFile:
+      dev: buildspec_dev.yml
+      prod: buildspec_prod.yml
+    logGroup:
+      constructId: BuildPjtLogGroup
+      name: django-deploy-build-pjt-lg
+  source:
+    repoName: django-cicd-aws
+    owner: ndhoanit1112
+    connectionArn: arn:aws:codestar-connections:us-east-1:511448762819:connection/950b3c31-1045-4558-8d12-08b6387fbca0

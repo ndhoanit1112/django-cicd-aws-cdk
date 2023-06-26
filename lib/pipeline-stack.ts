@@ -132,7 +132,7 @@ export class PipelineStack extends cdk.Stack {
       connectionArn: props.source.connectionArn,
     });
 
-    const webBuildAction = new codepipeline_actions.CodeBuildAction({
+    const buildAction = new codepipeline_actions.CodeBuildAction({
       actionName: "BuildWebAndCelery",
       project: buildProject,
       input: sourceOutput,
@@ -158,15 +158,28 @@ export class PipelineStack extends cdk.Stack {
           stageName: "Source",
           actions: [sourceAction],
         },
-        {
-          stageName: "Build",
-          actions: [webBuildAction],
-        },
-        {
-          stageName: "Deploy",
-          actions: [webDeployAction, celeryDeployAction],
-        },
       ],
+    });
+
+    if (props.mode == "prod") {
+      const approvalAction = new codepipeline_actions.ManualApprovalAction({
+        actionName: "ManualApprove"
+      });
+
+      pipeline.addStage({
+        stageName: "Approve",
+        actions: [approvalAction],
+      });
+    }
+
+    pipeline.addStage({
+      stageName: "Build",
+      actions: [buildAction],
+    });
+
+    pipeline.addStage({
+      stageName: "Deploy",
+      actions: [webDeployAction, celeryDeployAction],
     });
   }
 }

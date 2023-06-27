@@ -1,4 +1,4 @@
-# AWS CDK Infrastructer for Django CI/CD project
+# AWS CDK Infrastructure for Django CI/CD project
 
 This AWS CDK (Cloud Development Kit) project provides infrastructure automation for deploying [Django deploy CI/CD project](https://github.com/ndhoanit1112/django-cicd-aws) on AWS.
 

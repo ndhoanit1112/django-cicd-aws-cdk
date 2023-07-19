@@ -55,6 +55,7 @@ This project creates the following AWS resources:
 * __ELB Stack__: Configures an Application Load Balancer (ALB) to distribute incoming traffic across the ECS service.
 * __RDS Stack__: Deploys an Amazon RDS database instance to store the application's data.
 * __SQS Stack__: Creates an Amazon Simple Queue Service (SQS) queue for handling background tasks or message processing. In this project, it is used to perform calculations of Fibonacci numbers as a background task.
+* __Cache Stack__: Sets up a Memcached cluster to store and retrieve calculated Fibonacci numbers, reducing the need to recalculate them repeatedly.
 * __Pipeline Stack__: Configures an AWS CodePipeline to automate the deployment process, triggering builds and deployments on every code change.
 
 ## Clean Up

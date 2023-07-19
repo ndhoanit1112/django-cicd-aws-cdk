@@ -15,6 +15,9 @@ vpc:
     bastion:
       constructId: BastionSecurityGroup
       name: django-deploy-bastion-sg
+    cache:
+      constructId: CacheSecurityGroup
+      name: django-deploy-cache-sg
     isolated:
       constructId: IsolatedSecurityGroup
       name: django-deploy-isolated-sg
@@ -44,6 +47,13 @@ rds:
     constructId: DjangoDeployBastionHost
     hostName: django-deploy-bastion-ec2
     keyName: django-deploy-bastion-key
+cache:
+  stackId: DjangoDeployCacheStack
+  subnetGroup:
+    constructId: DjangoDeployCacheSubnetGroup
+    name: django-deploy-cache-subnet-group
+  cacheCluster:
+    constructId: DjangoDeployCacheCluster
 ecr:
   stackId: DjangoDeployEcrStack
   webappRepo:

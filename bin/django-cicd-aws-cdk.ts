@@ -10,6 +10,7 @@ import { EcsStack } from '../lib/ecs-stack';
 import { SqsStack } from '../lib/sqs-stack';
 import { PipelineStack, PipelineStackProps } from '../lib/pipeline-stack';
 import { SecretsManagerStack } from '../lib/secrets-manager-stack';
+import { CacheStack, CacheStackProps } from '../lib/cache-stack';
 
 const app = new cdk.App();
 const mode = process.env.DEPLOY_ENV === "prod" ? "prod" : "dev";
@@ -41,6 +42,17 @@ const rdsStack = new RdsStack(app, env.rds.stackId + envSuffix, {
   bastionSecurityGroup: vpcStack.bastionSg,
   ...env.rds
 });
+
+const cacheProps: CacheStackProps = {
+  env:stackDeployEnv,
+  mode: mode,
+  cacheSg: vpcStack.cacheSg,
+  ...env.cache
+};
+
+cacheProps.subnetGroup.subnets = vpcStack.vpc.privateSubnets;
+
+const cacheStack = new CacheStack(app, env.cache.stackId + envSuffix, cacheProps);
 
 const ecrStack = new EcrStack(app, env.ecr.stackId + envSuffix, {
   env: stackDeployEnv,
@@ -98,6 +110,10 @@ pipelineProps.buildProject.env = {
   djangoSecret: secretsManagerStack.djangoSecret,
   sqsUserSecret: secretsManagerStack.sqsUserSecret,
   sqsRegion: stackDeployEnv.region,
+  cacheInfo: {
+    host: cacheStack.cacheCluster.attrConfigurationEndpointAddress,
+    port: cacheStack.cacheCluster.attrConfigurationEndpointPort,
+  },
 };
 
 const pipelineStack = new PipelineStack(app, env.pipeline.stackId + envSuffix, pipelineProps);

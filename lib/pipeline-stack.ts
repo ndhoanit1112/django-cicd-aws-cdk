@@ -37,6 +37,10 @@ export interface PipelineStackProps extends cdk.StackProps {
       djangoSecret: secretsmanager.ISecret;
       sqsUserSecret: secretsmanager.ISecret;
       sqsRegion: string;
+      cacheInfo: {
+        host: string;
+        port: string;
+      };
     };
     constructId: string;
     buildSpecFile: {
@@ -88,7 +92,9 @@ export class PipelineStack extends cdk.Stack {
         value: `${props.buildProject.env.sqsUserSecret.secretArn}:secretAccessKey`,
         type: codebuild.BuildEnvironmentVariableType.SECRETS_MANAGER
       },
-      "AWS_SQS_REGION": { value: props.buildProject.env.sqsRegion }
+      "AWS_SQS_REGION": { value: props.buildProject.env.sqsRegion },
+      "CACHE_HOST": { value: props.buildProject.env.cacheInfo.host },
+      "CACHE_PORT": { value: props.buildProject.env.cacheInfo.port },
     }
 
     const buildProject = new codebuild.PipelineProject(this, props.buildProject.constructId, {

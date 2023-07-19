@@ -22,6 +22,10 @@ interface VpcStackProps extends cdk.StackProps {
       constructId: string;
       name: string;
     };
+    cache: {
+      constructId: string;
+      name: string;
+    };
     isolated: {
       constructId: string;
       name: string;
@@ -34,6 +38,7 @@ export class VpcStack extends cdk.Stack {
   readonly publicSg: ec2.ISecurityGroup;
   readonly privateSg: ec2.ISecurityGroup;
   readonly bastionSg: ec2.ISecurityGroup;
+  readonly cacheSg: ec2.ISecurityGroup;
   readonly isolatedSg: ec2.ISecurityGroup;
   constructor(scope: Construct, id: string, props: VpcStackProps) {
     super(scope, id, props);
@@ -109,6 +114,21 @@ export class VpcStack extends cdk.Stack {
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(22),
       'allow SSH traffic from anywhere'
+    );
+
+    this.cacheSg = new ec2.SecurityGroup(this, props.securityGroup.cache.constructId, {
+      vpc: this.vpc,
+      allowAllOutbound: true,
+      securityGroupName: props.securityGroup.cache.name,
+      description: 'Security group for cache cluster'
+    });
+
+    this.cacheSg.connections.allowFrom(
+      new ec2.Connections({
+        securityGroups: [this.privateSg],
+      }),
+      ec2.Port.tcp(11211),
+      'allow traffic on port 11211 (memcached) from private sg'
     );
 
     this.isolatedSg = new ec2.SecurityGroup(this, props.securityGroup.isolated.constructId, {

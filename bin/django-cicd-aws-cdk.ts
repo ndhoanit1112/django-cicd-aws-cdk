@@ -11,6 +11,7 @@ import { SqsStack } from '../lib/sqs-stack';
 import { PipelineStack, PipelineStackProps } from '../lib/pipeline-stack';
 import { SecretsManagerStack } from '../lib/secrets-manager-stack';
 import { CacheStack, CacheStackProps } from '../lib/cache-stack';
+import { EfsStack } from '../lib/efs-stack';
 
 const app = new cdk.App();
 const mode = process.env.DEPLOY_ENV === "prod" ? "prod" : "dev";
@@ -41,6 +42,13 @@ const rdsStack = new RdsStack(app, env.rds.stackId + envSuffix, {
   dbSecurityGroup: vpcStack.isolatedSg,
   bastionSecurityGroup: vpcStack.bastionSg,
   ...env.rds
+});
+
+const efsStack = new EfsStack(app, env.efs.stackId + envSuffix, {
+  env: stackDeployEnv,
+  vpc: vpcStack.vpc,
+  securityGroup: vpcStack.fileSystemSg,
+  ...env.efs
 });
 
 const cacheProps: CacheStackProps = {
@@ -76,6 +84,8 @@ const ecsStack = new EcsStack(app, env.ecs.stackId + envSuffix, {
   celeryImageRepository: ecrStack.celeryRepository,
   privateSecurityGroup: vpcStack.privateSg,
   elbTargetGroup: elbStack.targetGroup,
+  fileSystem: efsStack.fileSystem,
+  accessPoint: efsStack.accessPoint,
   ...env.ecs,
 });
 

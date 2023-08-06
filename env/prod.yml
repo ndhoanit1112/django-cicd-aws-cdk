@@ -18,6 +18,9 @@ vpc:
     cache:
       constructId: CacheSecurityGroup
       name: django-deploy-cache-sg
+    fileSystem:
+      constructId: FileSystemSecurityGroup
+      name: django-deploy-file-system-sg
     isolated:
       constructId: IsolatedSecurityGroup
       name: django-deploy-isolated-sg
@@ -54,6 +57,13 @@ cache:
     name: django-deploy-cache-subnet-group
   cacheCluster:
     constructId: DjangoDeployCacheCluster
+efs:
+  stackId: DjangoDeployEfsStack
+  constructId: DjangoDeployEfs
+  name: django-deploy-efs
+  accessPoint:
+    id: DjangoDeployAccessPoint
+    path: /django_deploy_temp
 ecr:
   stackId: DjangoDeployEcrStack
   webappRepo:
@@ -95,13 +105,18 @@ ecs:
       constructId: WebTaskDefinition
       name: django-deploy-web-td
       storage:
-        volumeName: gunicorn
-        mountPointPath:
+        gunicornVolumeName: gunicorn
+        gunicornMountPointPath:
           web: /var/run/gunicorn
           nginx: /var/run/gunicorn
+        efsVolumeName: temp
+        efsMountPointPath: /app/app/fibs/temp
     celery:
       constructId: CeleryTaskDefinition
       name: django-deploy-celery-td
+      storage:
+        efsVolumeName: temp
+        efsMountPointPath: /app/app/fibs/temp
   container:
     web:
       id: WebContainer

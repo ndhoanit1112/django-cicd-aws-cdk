@@ -57,6 +57,7 @@ This project creates the following AWS resources:
 * __SQS Stack__: Creates an Amazon Simple Queue Service (SQS) queue for handling background tasks or message processing. In this project, it is used to perform calculations of Fibonacci numbers as a background task.
 * __Cache Stack__: Sets up a Memcached cluster to store and retrieve calculated Fibonacci numbers, reducing the need to recalculate them repeatedly.
 * __Pipeline Stack__: Configures an AWS CodePipeline to automate the deployment process, triggering builds and deployments on every code change.
+* __EFS Stack__: Sets up a shared file system between ECS tasks (This stack doesn't support the funtionality of the application, it is for study/experimental purpose).
 
 ## Clean Up
 To remove the deployed infrastructure from your AWS account, run the following command:

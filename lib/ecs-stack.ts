@@ -2,6 +2,8 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as efs from 'aws-cdk-lib/aws-efs';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import { Construct } from 'constructs';
 
@@ -29,16 +31,22 @@ interface EcsStackProps extends cdk.StackProps {
       constructId: string;
       name: string;
       storage: {
-        volumeName: string;
-        mountPointPath: {
+        gunicornVolumeName: string;
+        gunicornMountPointPath: {
           web: string;
           nginx: string;
         };
+        efsVolumeName: string;
+        efsMountPointPath: string;
       };
     };
     celery: {
       constructId: string;
       name: string;
+      storage: {
+        efsVolumeName: string;
+        efsMountPointPath: string;
+      }
     };
   };
   container: {
@@ -64,6 +72,8 @@ interface EcsStackProps extends cdk.StackProps {
   celeryImageRepository: ecr.Repository;
   privateSecurityGroup: ec2.ISecurityGroup;
   elbTargetGroup: elbv2.ApplicationTargetGroup;
+  fileSystem: efs.FileSystem;
+  accessPoint: efs.AccessPoint;
 }
 
 export class EcsStack extends cdk.Stack {
@@ -108,19 +118,52 @@ export class EcsStack extends cdk.Stack {
     });
 
     const volume = {
-      name: props.taskDef.web.storage.volumeName,
+      name: props.taskDef.web.storage.gunicornVolumeName,
     };
 
     webTaskDef.addVolume(volume);
     webappContainer.addMountPoints({
-      containerPath: props.taskDef.web.storage.mountPointPath.web,
+      containerPath: props.taskDef.web.storage.gunicornMountPointPath.web,
       readOnly: false,
-      sourceVolume: props.taskDef.web.storage.volumeName,
+      sourceVolume: props.taskDef.web.storage.gunicornVolumeName,
     });
     nginxContainer.addMountPoints({
-      containerPath: props.taskDef.web.storage.mountPointPath.nginx,
+      containerPath: props.taskDef.web.storage.gunicornMountPointPath.nginx,
       readOnly: false,
-      sourceVolume: props.taskDef.web.storage.volumeName,
+      sourceVolume: props.taskDef.web.storage.gunicornVolumeName,
+    });
+
+    const efsWritePolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        "elasticfilesystem:ClientMount",
+        "elasticfilesystem:ClientWrite"
+      ],
+      resources: [props.fileSystem.fileSystemArn],
+      conditions: {
+        StringEquals: {
+          "elasticfilesystem:AccessPointArn": props.accessPoint.accessPointArn
+        }
+      },
+    });
+
+    webTaskDef.addToTaskRolePolicy(efsWritePolicy);
+
+    webTaskDef.addVolume({
+      name: props.taskDef.web.storage.efsVolumeName,
+      efsVolumeConfiguration: {
+        fileSystemId: props.fileSystem.fileSystemId,
+        transitEncryption: "ENABLED",
+        authorizationConfig: {
+          accessPointId: props.accessPoint.accessPointId,
+          iam: "ENABLED",
+        }
+      },
+    });
+    webappContainer.addMountPoints({
+      containerPath: props.taskDef.web.storage.efsMountPointPath,
+      readOnly: false,
+      sourceVolume: props.taskDef.web.storage.efsVolumeName,
     });
 
     const celeryTaskDef = new ecs.FargateTaskDefinition(this, props.taskDef.celery.constructId, {
@@ -130,7 +173,7 @@ export class EcsStack extends cdk.Stack {
       family: props.taskDef.celery.name,
     });
 
-    celeryTaskDef.addContainer(props.container.celery.id, {
+    const celeryContainer = celeryTaskDef.addContainer(props.container.celery.id, {
       containerName: props.container.celery.name,
       image: ecs.ContainerImage.fromEcrRepository(props.celeryImageRepository),
       entryPoint: props.container.celery.entryPoint.split(','),
@@ -139,6 +182,39 @@ export class EcsStack extends cdk.Stack {
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'ecs'
       }),
+    });
+
+    const efsReadPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        "elasticfilesystem:ClientMount",
+        "elasticfilesystem:ClientRead"
+      ],
+      resources: [props.fileSystem.fileSystemArn],
+      conditions: {
+        StringEquals: {
+          "elasticfilesystem:AccessPointArn": props.accessPoint.accessPointArn
+        }
+      },
+    });
+
+    celeryTaskDef.addToTaskRolePolicy(efsReadPolicy);
+
+    celeryTaskDef.addVolume({
+      name: props.taskDef.celery.storage.efsVolumeName,
+      efsVolumeConfiguration: {
+        fileSystemId: props.fileSystem.fileSystemId,
+        transitEncryption: "ENABLED",
+        authorizationConfig: {
+          accessPointId: props.accessPoint.accessPointId,
+          iam: "ENABLED",
+        }
+      },
+    });
+    celeryContainer.addMountPoints({
+      containerPath: props.taskDef.celery.storage.efsMountPointPath,
+      readOnly: false,
+      sourceVolume: props.taskDef.celery.storage.efsVolumeName,
     });
 
     // Services
